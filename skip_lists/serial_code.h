@@ -1,19 +1,22 @@
 #include <iostream>
+
 #include <random>
 #include <chrono>
 using namespace std;
 
+// function uniform() returns some random real number from 0 to 1 from uniform probability distribution
 double uniform() {
-    // Use the current time as a seed for the random number generator
+    // Using the current time as a seed for the random number generator
     unsigned seed = chrono::system_clock::now().time_since_epoch().count();
     default_random_engine generator(seed);
     uniform_real_distribution<double> distribution(0.0, 1.0);
     return distribution(generator);
 }
 
-// probablity the a node should be created as up to a current node
-double prob = 0.5;
+// // probablity the a node should be created as up to a current node
+// double prob = 0.5;
 
+// below struct node is a structure of a node in skip list.
 struct node{
     int data;
     struct node* up;
@@ -22,6 +25,8 @@ struct node{
     struct node* right;
 };
 
+// function create_node(int d) creates a node with data d and returns a pointer to it.
+// Note: The node created is cyclic node. Since the skip list implemented here is cyclic.
 struct node* create_node(int data){
     struct node* current = (struct node*)malloc(sizeof(struct node));
     current->data = data;
@@ -32,44 +37,52 @@ struct node* create_node(int data){
     return current;
 }
 
-
+// The below class skip_list provides API's for using skip list.
+// The skip list implemented here is cicular.
+// Here the skip list do not allow duplicates (which is okay for nodes of a graphs), similar to balanced BST.
 
 class skip_list{
-    // the skip lists here is circular
-    // do not allow duplicates (which is okay for nodes of a graphs) similar to balanced BST
-
     private:
-    // In this representation, head corresponds to the node which has the highest height in the skip list(for effecient search) 
-    // Alternative choice: head can be also choosen to be the minimum data element.
+    /*  
+        In this implementation, head points to the node which has the highest height in 
+        the skip list (for effecient search).
+    */
     struct node* head = NULL;
 
-    // storing additional pointer transition_ptr along with head saves logn time in search
-    // transition_ptr infact points to node containing maximum data in skip list.
-    struct node* transition_ptr = NULL; 
+    /* transition_ptr points to the node containing maximum data in skip list. */
+    struct node* transition_ptr = NULL;
+
+    /* Below function search_left(v)
+        returns : 
+                    NULL                (if no left parent of v)
+                    left_parent_ptr     (if there is a left_parent)     */
+    struct node* search_left(struct node* );
+    /* search_right is not needed because skip list here is cyclic :) */
 
     public:
-    double prob = 0.5
+    /* Default probability is 1/2 for obvious reasons */
+    double prob = 0.5 
+
+    /* Class constructor for default probability */
     skip_list(){
-        // default prob 0.5
     }
+
+    /* Class constructor for custom probability */
     skip_list(double prob){
         this->prob = prob;
     }
 
-    struct node* search_left(struct node* v){
-        struct node* current = v;
-        while(current->up == NULL){
-            current = current->left;
-            if(current == v) return NULL;
-        }
-        return current->up;
-    }
+    /*  Below function find_rep()
+        returns :  
+                    -1                  (if there are no elements in skip list)
+                    rep                 (representative to be choosen ?????????????????)    */
+    int find_rep();
 
-    // search_right is not needed because it is cyclic :)
-    int find_rep(){
-        return head->data;
-    }
-
+    /*  Below function insert(d) :
+            returns :
+                    true                (if d is not present in skip list, inserts d into 
+                                        skip list and returns true)
+                    false               (if d is already present in skip list */
     void insert(int data){
         if(head == NULL){
             struct node* current = create_node(data);
@@ -186,3 +199,22 @@ class skip_list{
 
     }
 };
+
+struct node* skip_list::search_left(struct node* v){
+    struct node* current = v;
+    while(current->up == NULL){
+        current = current->left;
+        if(current == v){
+            /* Left parent not found */
+            return NULL;
+        }
+    }
+    /* Left parent found */
+    return current->up;
+}
+
+int skip_list::find_rep(){
+    return head->data;
+}
+
+

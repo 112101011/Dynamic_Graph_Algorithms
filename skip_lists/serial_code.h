@@ -39,16 +39,17 @@ struct node* create_node(int data){
 // Here the skip list do not allow duplicates (which is okay for nodes of a graphs), similar to balanced BST.
 
 class skip_list{
-    private:
+    // private:
+    public:
     /*  
         In this implementation, head points to the node which has the highest height in 
-        the skip list (for effecient search).
+        the skip list (for effecient operations).
     */
     struct node* head = NULL;
 
-    /* transition_ptr points to the node containing maximum data in skip list. */
-    struct node* transition_ptr = NULL;
-    int rep = INT_MAX;
+    /* rep is the pointer to poiting to minimum data element in skip list. */
+    /* always rep->down = NULL that is rep lies in bottom layer */
+    struct node* rep = NULL;
 
     /* Below helper function search_left(v)
         returns : 
@@ -57,34 +58,22 @@ class skip_list{
     struct node* search_left(struct node* );
     /* search_right is not needed because skip list here is cyclic */
 
-    /*  Below helper function connect()
+    /*  Below helper function connect_right()
             inserts current node in between nodeL and nodeL->right */
-    void connect(struct node* nodeL, struct node* current){
-        // seq: nodeL (current) nodeL->right
-        // nodeL and current both are not NULL.
+    void connect_left(struct node* nodeL, struct node* current);
 
-        current->left = nodeL;
-        current->right = nodeL->right;
-        nodeL->right->left = current;
-        nodeL->right = current;
-    }
+    /*  Below helper function connect_left()
+            inserts current node in between nodeR->left and nodeR */
+    void connect_right(struct node* current, struct node* nodeR);
 
-    /* Inserting an element in the skip list */
-    void introduce_new_element(struct node* nodeL, int data){
-        struct node* current = create_node(data);
-        connect(nodeL, current);
+    /* Below helper function raise_up(current)
+            Builds node up to the current based on probability distribution */
+    void raise_up(struct node* current);
 
-        while(uniform() < prob){
-            struct node* left_parent = search_left(current);
-            current->up = create_node(data);
-            current->up->down = current;
-            if(left_parent != NULL){
-                connect(left_parent, current->up);
-            }else head = current->up;
-            current = current->up;
-        }
-        return;
-    }
+    /* Below helper function insert_helper(int data, struct node* trav) returns
+            true    (inserts data and returns true if data is already not present in skip_list)
+            false   (otherwise) */
+    bool insert_helper(int , struct node* );
 
     public:
     /* Default probability is 1/2 for obvious reasons */
@@ -102,7 +91,7 @@ class skip_list{
     /*  Below (API) function  find_rep()
         returns :  
                     -1                  (if there are no elements in skip list)
-                    rep                 (representative to be choosen ?????????????????)    */
+                    rep                 (otherwise) */
     int find_rep();
 
     /*  Below (API) function  insert(d) :
@@ -110,50 +99,42 @@ class skip_list{
                     true                (if d is not present in skip list, inserts d into 
                                         skip list and returns true)
                     false               (if d is already present in skip list */
-    void insert(int );
+    bool insert(int );
 
-    void insert_helper(int data, struct node* trav){
-        // Hadling left suffices, because of cyclicity.
-        // Here trav is such that trav->left != trav implies trav->right != trav (again because of cyclicity) i.e thare are at least two elements in the skip list
-        if(trav->data == data){
-            cout << data << " already present\n";
-            return;
-        }
-
-        if(trav->data > data){
-            if(trav->left->data > data){
-                if(trav->left->data == head->data){
-                    // edge case: data < min(all data in current skip list)
-
-                }else{
-                    insert_helper(data, trav->left);
-                }
-            }else if(trav->left->data == data){
-                cout << data << " already present\n";
-                return;
-            }else{
-                if(trav->down == NULL){
-                    // insertion done
-                    introduce_new_node(trav->left, data);
-                    return;
-                }else insert_helper(data, trav->down); // move down
-            }
-        }else{
-            if(trav->right == head->data){
-                // edge case: data > max(all data in current skip list)
-
-            }
-            insert_helper(data, trav->right);
-        }
-    }
-
-    bool search(int data){
-
-    }
+    /* Below (API) search(d)
+            returns :
+                    true                (if d is present in skip list)
+                    false               (otherwise)                             */
+    bool search(int );
 
     /* Below function (API) prints skip list contents */
     void print();
 };
+
+void skip_list::connect_left(struct node* nodeL, struct node* current){
+    // seq: nodeL (current) nodeL->right
+    // nodeL and current both are not NULL.
+
+    current->left = nodeL;
+    current->right = nodeL->right;
+    nodeL->right->left = current;
+    nodeL->right = current;
+
+    return;
+}
+
+void skip_list::connect_right(struct node* current, struct node* nodeR){
+    // seq: nodeR->left (current) nodeR->right
+    /* current and nodeR are not NULL */
+
+    current->right = nodeR;
+    current->left = nodeR->left;
+    nodeR->left->right = current;
+    nodeR->left = current;
+
+    return;
+}
+
 
 struct node* skip_list::search_left(struct node* v){
     struct node* current = v;
@@ -169,61 +150,133 @@ struct node* skip_list::search_left(struct node* v){
 }
 
 int skip_list::find_rep(){
-    return head->data;
+    return rep->data;
+}
+
+void skip_list::raise_up(struct node* current){
+    while(uniform() < prob){
+        /* up should be created and connected correctly */
+        struct node* left_parent = search_left(current);
+        current->up = create_node(current->data);
+        current->up->down = current;
+        if(left_parent != NULL) connect_left(left_parent, current->up);
+        else head = current->up;
+        current = current->up;
+    }
+    return;
 }
 
 bool skip_list::insert(int data){
+    // The following are 3 edge cases
+    // 1) head is NULL
+    // 2) inserting data where data < min(all data in skip list)
+    // 3) inserting data where data > max(all data in skip list)
+
     if(head == NULL){
         /* Empty skip list */
         struct node* current = create_node(data);
-        rep = data;
-        while(uniform() < prob){
-            /* up should be created */
-            current->up = create_node(data);
-            current->up->down = current;
-            current = current->up;
-        }
+        rep = current;
         head = current;
-
+        raise_up(current);
         return true;
     }
 
-    if(head->data == data){
-        /* data already present */
-        return false;
+    if(rep->data > data){
+        /* Edge case 2*/
+        struct node* current = create_node(data);
+        connect_right(current, rep);
+        rep = current;
+        raise_up(current);
+        return true;
     }
+
+    if(rep->left->data < data){
+        /*Edge case 3*/
+        struct node* current = create_node(data);
+        connect_left(rep->left, current);
+        raise_up(current);
+        return true;
+    }
+
+    /* It is guranteed that : min(all elements) <= data <= max(all_elements) */
+    /* So if data is not present in skip list, it is going to be inserted somewhere in between */
+
+    struct node* trav = head;
+    while(trav->left == trav && trav->down != NULL) trav = trav->down; // go down if only one element in level
+    return insert_helper(data, trav);
+}
+
+bool skip_list::insert_helper(int data, struct node* trav){
+    /* Here trav != trav->left */ 
+
+    if(trav->data > data){
+        if(trav->left->data >= data) return insert_helper(data, trav->left);
+        /* trav->left->data < data. Hence data is somewhere in between trav->left, trav */
+        if(trav->down == NULL){
+            struct node* current = create_node(data);
+            connect_right(current, trav);
+            raise_up(current);
+            return true;    // insertion done
+        }
+        return insert_helper(data, trav->down); // move down
+    }
+    
+    if(trav->data < data) insert_helper(data, trav->right);
+
+    /* data is already present i.e(trav->data = data) */
+    return false;
+}
+
+void skip_list::print(){
+    // skip_list is printed from down level to top level
+    struct node* trav = rep;
+    int level = 0;
+    while(trav != NULL){
+        cout << "Level " << level << " : ";
+        struct node* start = trav;
+        cout << trav->data << " ";
+        trav = trav->right;
+        while(trav != start){
+            cout << trav->data << " ";
+            trav = trav->right;
+        }
+        cout << "\n";
+        if(trav->up != NULL){
+            trav = trav->up;
+        }else{
+            trav = trav->right;
+            while(trav != start && trav->up == NULL){
+                trav = trav->right;
+            }
+            trav = trav->up;
+        }
+        level++;
+    }
+    return;
+}
+
+bool skip_list::search(int data){
+    if(head == NULL) return false;
+    if(rep->data > data || rep->left->data < data) return false;
 
     struct node* trav = head;
     while(trav->left == trav && trav->down != NULL) trav = trav->down;
-    if(trav->left == trav){
-        // Only one element is present in skip list. (not one node!!)
-        struct node* current = create_node(data);
-        connect(current, trav);
-
-        if(data > trav->data) transition_ptr = current;
-        else transition_ptr = head;
-        
-        if(data < trav->data) rep = data;
-
-        while(uniform() < prob){
-            struct node* left_parent = search_left(current);
-            current->up = create_node(data);
-            current->up->down = current;
-            if(left_parent != NULL){
-                // seq : left_parent current->up left_parent->right
-                connect(left_parent, current->up);
-            }else head = current->up;
-            current = crrent->up;
+    while(1){
+        if(trav->data == data) return true;
+        if(trav->data < data){
+            if(data <= trav->right->data){
+                if(trav->down != NULL) trav = trav->down;
+                else if(trav->right->data == data) return true;
+                else return false;
+            }else{
+                if(trav->right->data > trav->data) trav = trav->right;
+                else if(trav->down != NULL) trav = trav->down;
+                else return false;
+            }
+        }else{
+            if(trav->left->data < trav->data) trav = trav->left;
+            else if(trav->down != NULL) trav = trav->down;
+            else return false;
         }
-
-        return true;
     }
-
-    insert_helper(data, head);
-}
-
-
-void skip_list::print(){
-    cout << "namaste" << "\n";
-
 }

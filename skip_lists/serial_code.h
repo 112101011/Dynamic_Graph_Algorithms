@@ -212,28 +212,36 @@ bool skip_list::insert(long long int data){
 
     struct node* trav = head;
     while(trav->left == trav && trav->down != NULL) trav = trav->down; // go down if only one element in level
-    return insert_helper(data, trav);
-}
 
-bool skip_list::insert_helper(long long int data, struct node* trav){
-    /* Here trav != trav->left */ 
-
-    if(trav->data > data){
-        if(trav->left->data >= data) return insert_helper(data, trav->left);
-        /* trav->left->data < data. Hence data is somewhere in between trav->left, trav */
-        if(trav->down == NULL){
-            struct node* current = create_node(data);
-            connect_right(current, trav);
-            raise_up(current);
-            return true;    // insertion done
+    while(1){
+        if(trav->data == data) return false;
+        if(trav->data < data){
+            if(data <= trav->right->data){
+                if(trav->down != NULL) trav = trav->down;
+                else if(trav->right->data == data) return false;
+                else{
+                    struct node* current = create_node(data);
+                    connect_left(trav, current);
+                    raise_up(current);  
+                    return true;
+                }
+            }else{
+                if(trav->right->data > trav->data) trav = trav->right;
+                else if(trav->down != NULL) trav = trav->down;
+                else{
+                    // this will never happen
+                    return true;
+                }
+            }
+        }else{
+            if(trav->left->data < trav->data) trav = trav->left;
+            else if(trav->down != NULL) trav = trav->down;
+            else{
+                // this will never happen
+                return true;
+            }
         }
-        return insert_helper(data, trav->down); // move down
     }
-    
-    if(trav->data < data) insert_helper(data, trav->right);
-
-    /* data is already present i.e(trav->data = data) */
-    return false;
 }
 
 void skip_list::print(){
@@ -297,7 +305,7 @@ bool skip_list::search(long long int data){
 }
 
 
-void skip_list::destroy_down(struct node* trav){
+void skip_list::destroy_down(struct node* trav){    
     while(trav != NULL){
         trav->left->right = trav->right;
         trav->right->left = trav->left;
@@ -313,7 +321,7 @@ void skip_list::remove(long long int data){
     // Edge cases
     // 1) head = NULL
     if(head == NULL) return;
-
+    // if(rep->data > data || rep->left->data < data) return;
     struct node* trav = head;
     while(trav->left == trav && trav->down != NULL) trav = trav->down;
     while(1){
@@ -334,13 +342,12 @@ void skip_list::remove(long long int data){
                 return;
             }
             destroy_down(trav);
-
             return;
         }
         if(trav->data < data){
             if(data <= trav->right->data){
-                if(trav->down != NULL) trav = trav->down;
-                else if(trav->right->data == data) trav = trav->right;
+                if(trav->right->data == data) trav = trav->right;
+                else if(trav->down != NULL) trav = trav->down;
                 else return;    // data is not present
             }else{
                 if(trav->right->data > trav->data) trav = trav->right;

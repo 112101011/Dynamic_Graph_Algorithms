@@ -7,7 +7,7 @@ g++ -o 2 set_code.cpp
 $(rm skip_list_time.txt set_time.txt)
 
 # Number of tests
-NUM_TESTS=1000
+NUM_TESTS=10000
 
 # Loop over tests
 for ((i=1; i<=NUM_TESTS; i++)); do

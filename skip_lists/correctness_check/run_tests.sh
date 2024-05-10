@@ -34,4 +34,6 @@ for ((i=1; i<=NUM_TESTS; i++)); do
     $(rm temp.txt)
 done
 
+$(python3 plot_time.py)
+
 $(rm 1 2)
